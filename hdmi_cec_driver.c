@@ -247,34 +247,28 @@ int HdmiCecClose(int handle)
 void HdmiCecGetPhysicalAddress(int handle, unsigned int *physicalAddress)
 
 {
-    unsigned int phy_address=0;
+    unsigned int phy_address = 0x0F0F0F0F;
     int ret = 0;
 
-    printf("[HALDVR] %s \n",__func__);
-
-    if(physicalAddress == NULL)
-    {
-        printf("[HALDVR] NULL pointer passed\n");
-        return;
-    }
-    pthread_mutex_lock(&Cec_DriverMutex);
-    if ((handle != ((int)Cec_driverCtx_ptr))) {
-        printf("[HALDVR] Assert Failed at [%s][%d]\r\n", __FUNCTION__, __LINE__);
-        pthread_mutex_unlock(&Cec_DriverMutex);
-        return;
-    }
-    ret = ioctl(Cec_driverCtx_ptr->cecFd, CEC_IOC_GET_PHYSICAL_ADDR, &phy_address);
-    if (ret != 0)
-    { 
-        printf("[HALDVR] CEC_IOC_GET_PHYSICAL_ADDR returned error %d\n",ret);
-        pthread_mutex_unlock(&Cec_DriverMutex);
-        return;
-    }
-    printf("[HALDVR] %s: Physical address: %d \n",__func__, phy_address);
-    *physicalAddress = phy_address;
-
-    pthread_mutex_unlock(&Cec_DriverMutex);
-
+	if (physicalAddress != NULL) {
+		pthread_mutex_lock(&Cec_DriverMutex);
+		if ((handle != ((int)Cec_driverCtx_ptr))) {
+			printf("[HALDVR] Assert Failed at [%s][%d]\r\n", __FUNCTION__, __LINE__);
+		} else {
+			ret = ioctl(Cec_driverCtx_ptr->cecFd, CEC_IOC_GET_PHYSICAL_ADDR, &phy_address);
+			if (ret != 0) {
+				printf("[HALDVR] CEC_IOC_GET_PHYSICAL_ADDR returned error %d\n",ret);
+			} else {
+				/* Upper layer format requirement */
+				phy_address = ((((phy_address >>8) &0xF0 ) << 20)|( ((phy_address >> 8) &0x0F ) << 16) |((phy_address & 0x00F0) << 4)  | (phy_address & 0x000F));
+			} 
+		}
+		pthread_mutex_unlock(&Cec_DriverMutex);
+		printf("[HALDVR] %s: Physical address: 0x%x \n",__func__, phy_address);
+		*physicalAddress = phy_address;
+	} else {
+		printf("[HALDVR] NULL pointer passed\n");
+	}
 }
 
 
